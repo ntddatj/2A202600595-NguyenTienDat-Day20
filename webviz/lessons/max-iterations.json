@@ -1,0 +1,22 @@
+{
+  "id": "max-iterations",
+  "title": "Guardrail max_iterations (chặn vòng lặp)",
+  "option_a": {
+    "label": "A · Có trần lặp",
+    "code": "        settings = get_settings()\n\n        if state.iteration >= settings.max_iterations:\n            next_agent = \"done\"\n            logger.warning(\"Max iterations (%d) reached, forcing done.\", settings.max_iterations)\n        elif state.research_notes is None:\n            next_agent = \"researcher\"\n        elif state.analysis_notes is None:\n            next_agent = \"analyst\"\n        elif state.final_answer is None:\n            next_agent = \"writer\"\n        else:\n            next_agent = \"done\"",
+    "source_ref": "src/multi_agent_research_lab/agents/supervisor.py:23-35",
+    "narration": "Supervisor (điều phối) dừng khi đạt max_iterations — một guardrail (hàng rào an toàn) chống vòng lặp vô hạn nếu một field (trường dữ liệu) mãi không được điền. Tắt công tắc này: trần bị nâng rất cao và researcher cố tình không điền research_notes, nên workflow lặp mãi — backend phải chặn cứng ở 20 bước và phát cảnh báo."
+  },
+  "option_b": {
+    "label": "B · Không có trần lặp",
+    "code": "        if state.research_notes is None:\n            next_agent = \"researcher\"   # neu agent nay mai khong dien -> lap vo tan\n        elif state.analysis_notes is None:\n            next_agent = \"analyst\"\n        ...",
+    "source_ref": null,
+    "narration": "Không có trần: chỉ cần một agent không điền được ô của mình, supervisor sẽ route (định tuyến) tới nó mãi mãi, đốt tiền và thời gian. Production luôn cần guardrail kèm cảnh báo."
+  },
+  "glossary": [
+    {"term": "guardrail", "vi": "hàng rào an toàn giới hạn hành vi"},
+    {"term": "max_iterations", "vi": "số vòng lặp tối đa cho phép"},
+    {"term": "supervisor", "vi": "agent điều phối, chọn ai chạy tiếp"},
+    {"term": "field", "vi": "trường dữ liệu trong state"}
+  ]
+}

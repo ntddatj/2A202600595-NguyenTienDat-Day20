@@ -1,0 +1,22 @@
+{
+  "id": "control-vs-observability",
+  "title": "Control plane vs Observability plane",
+  "option_a": {
+    "label": "A · Tách 2 làn dữ liệu",
+    "code": "    def record_route(self, route: str) -> None:\n        self.route_history.append(route)\n        self.iteration += 1\n\n    def add_trace_event(self, name: str, payload: dict[str, Any]) -> None:\n        self.trace.append({\"name\": name, \"payload\": payload})",
+    "source_ref": "src/multi_agent_research_lab/core/state.py:29-34",
+    "narration": "route_history và iteration là control plane (làn điều khiển) — chúng LÁI đồ thị chạy. trace là observability plane (làn quan sát) — chỉ để con người nhìn, không lái logic. Tách 2 làn giúp xóa/đổi log mà không làm hỏng hành vi. Production phân biệt rạch ròi để observability (khả năng quan sát) không bao giờ ảnh hưởng control flow (luồng điều khiển)."
+  },
+  "option_b": {
+    "label": "B · Trộn lẫn điều khiển và log",
+    "code": "        # dung chinh log de quyet dinh route -> doi format log la vo logic\n        if 'researcher' in str(state.trace):\n            next_agent = 'analyst'",
+    "source_ref": null,
+    "narration": "Nếu lấy dữ liệu observability ra điều khiển luồng, chỉ cần đổi định dạng log là logic vỡ — một anti-pattern (mẫu thiết kế nên tránh) kinh điển."
+  },
+  "glossary": [
+    {"term": "control plane", "vi": "làn dữ liệu lái luồng chạy"},
+    {"term": "observability", "vi": "khả năng quan sát hệ thống đang làm gì"},
+    {"term": "trace", "vi": "vết ghi lại các bước đã chạy"},
+    {"term": "control flow", "vi": "luồng điều khiển của chương trình"}
+  ]
+}

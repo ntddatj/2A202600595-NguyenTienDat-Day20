@@ -1,0 +1,22 @@
+{
+  "id": "route-by-state",
+  "title": "Supervisor route theo state, không tự làm việc",
+  "option_a": {
+    "label": "A · Chỉ định tuyến + ghi vết",
+    "code": "        logger.info(\"Supervisor routing → %s (iteration %d)\", next_agent, state.iteration)\n        state.record_route(next_agent)\n        state.add_trace_event(\"supervisor.route\", {\"next\": next_agent, \"iteration\": state.iteration})\n        return state",
+    "source_ref": "src/multi_agent_research_lab/agents/supervisor.py:37-40",
+    "narration": "Supervisor chỉ đọc state để quyết định route (định tuyến) tiếp theo và ghi lại lựa chọn — nó KHÔNG tự viết research_notes hay final_answer. Đây là separation of concerns (tách bạch trách nhiệm): orchestrator (bộ điều phối) điều phối, worker (agent thợ) làm việc."
+  },
+  "option_b": {
+    "label": "B · Supervisor vừa điều phối vừa làm",
+    "code": "        # supervisor tu goi LLM, tu viet notes roi cung tu dinh tuyen\n        state.research_notes = LLMClient().complete(...).content\n        state.final_answer = LLMClient().complete(...).content\n        return state  # mot class om het -> kho test, kho mo rong",
+    "source_ref": null,
+    "narration": "Gộp điều phối và làm việc vào một chỗ khiến class phình to, khó test và khó thêm agent mới."
+  },
+  "glossary": [
+    {"term": "route", "vi": "định tuyến: chọn node chạy tiếp"},
+    {"term": "orchestrator", "vi": "bộ điều phối các agent"},
+    {"term": "separation of concerns", "vi": "tách bạch trách nhiệm từng phần"},
+    {"term": "worker", "vi": "agent thợ làm một việc cụ thể"}
+  ]
+}

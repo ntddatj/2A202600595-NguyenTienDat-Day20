@@ -1,0 +1,22 @@
+{
+  "id": "langgraph-edges",
+  "title": "LangGraph: conditional edge vs loop-back edge",
+  "option_a": {
+    "label": "A · Đồ thị khai báo + cạnh điều kiện",
+    "code": "        graph.set_entry_point(\"supervisor\")\n        graph.add_conditional_edges(\n            \"supervisor\",\n            _route,\n            {\"researcher\": \"researcher\", \"analyst\": \"analyst\", \"writer\": \"writer\", END: END},\n        )\n        graph.add_edge(\"researcher\", \"supervisor\")\n        graph.add_edge(\"analyst\", \"supervisor\")\n        graph.add_edge(\"writer\", \"supervisor\")",
+    "source_ref": "src/multi_agent_research_lab/graph/workflow.py:56-64",
+    "narration": "add_conditional_edges tạo cạnh điều kiện (nét đứt) từ supervisor: đi đâu tùy hàm _route đọc state. add_edge tạo cạnh cố định (nét liền) cho loop-back (vòng về) worker→supervisor. Đồ thị khai báo (declarative graph) tách phần MÔ TẢ luồng khỏi phần CHẠY (.stream())."
+  },
+  "option_b": {
+    "label": "B · Điều phối bằng if/while thủ công",
+    "code": "while True:\n    nxt = pick_next(state)\n    if nxt == 'done': break\n    state = AGENTS[nxt].run(state)   # luong nam rai rac trong code menh lenh",
+    "source_ref": null,
+    "narration": "Điều phối thủ công bằng vòng lặp khiến luồng khó nhìn tổng thể, khó vẽ, khó chèn observability một cách nhất quán."
+  },
+  "glossary": [
+    {"term": "conditional edge", "vi": "cạnh điều kiện, đi đâu tùy state"},
+    {"term": "loop-back", "vi": "cạnh vòng trở lại node trước"},
+    {"term": "declarative graph", "vi": "đồ thị khai báo, mô tả tách khỏi chạy"},
+    {"term": ".stream()", "vi": "chạy đồ thị, nhả kết quả từng node"}
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "id": "fail-open",
+  "title": "Tracing fail-open (lỗi quan sát không làm sập hệ thống)",
+  "option_a": {
+    "label": "A · Best-effort, nuốt lỗi tracing",
+    "code": "    langsmith_run = None\n    try:\n        if os.environ.get(\"LANGCHAIN_TRACING_V2\") == \"true\":\n            from langsmith import Client\n\n            client = Client()\n            langsmith_run = client.create_run(\n                name=name,\n                run_type=\"chain\",\n                inputs=attributes or {},\n            )\n    except Exception:\n        pass  # tracing is best-effort, never block the main flow",
+    "source_ref": "src/multi_agent_research_lab/observability/tracing.py:43-55",
+    "narration": "Lớp tracing (ghi vết) là best-effort (cố hết sức, không bắt buộc thành công): nếu nó lỗi thì except ... pass nuốt lỗi để main flow (luồng chính) vẫn chạy. Đây là fail-open (lỗi phụ trợ không chặn hệ thống). Bấm nút 'gây lỗi tracing': workflow vẫn hoàn tất, chỉ hiện banner cảnh báo."
+  },
+  "option_b": {
+    "label": "B · Tracing lỗi làm sập cả run",
+    "code": "    client = Client()                       # neu LangSmith loi/thieu key...\n    langsmith_run = client.create_run(...)  # ...exception nay lam chet workflow",
+    "source_ref": null,
+    "narration": "Nếu để lỗi tracing ném ra ngoài, một sự cố ở hệ thống QUAN SÁT lại đánh sập hệ thống CHÍNH — sai về mặt độ tin cậy (reliability)."
+  },
+  "glossary": [
+    {"term": "tracing", "vi": "ghi vết các bước để quan sát"},
+    {"term": "fail-open", "vi": "lỗi phụ trợ không chặn luồng chính"},
+    {"term": "best-effort", "vi": "cố hết sức, không bắt buộc thành công"},
+    {"term": "reliability", "vi": "độ tin cậy của hệ thống"}
+  ]
+}

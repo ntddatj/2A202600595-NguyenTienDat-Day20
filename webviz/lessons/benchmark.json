@@ -1,0 +1,22 @@
+{
+  "id": "benchmark",
+  "title": "Benchmark: đo lường thay vì cảm tính",
+  "option_a": {
+    "label": "A · Runner cắm được + đo đa chiều",
+    "code": "def run_benchmark(\n    run_name: str,\n    query: str,\n    runner: Runner,\n) -> tuple[ResearchState, BenchmarkMetrics]:\n    \"\"\"Run a single benchmark trial and return the state + rich metrics.\"\"\"\n\n    started = perf_counter()\n    state = runner(query)\n    latency = perf_counter() - started\n\n    cost = _total_cost(state)\n    coverage = _citation_coverage(state)\n    notes = _token_summary(state)\n\n    metrics = BenchmarkMetrics(\n        run_name=run_name,\n        latency_seconds=round(latency, 3),\n        estimated_cost_usd=cost if cost > 0 else None,\n        notes=f\"citation_coverage={coverage} {notes}\",\n    )\n    return state, metrics",
+    "source_ref": "src/multi_agent_research_lab/evaluation/benchmark.py:43-64",
+    "narration": "run_benchmark nhận một runner (hàm chạy cắm được) nên ta đo single-agent và multi-agent bằng cùng một thước. Nó đo latency (độ trễ), cost (chi phí token thật), citation coverage (tỉ lệ trích nguồn) — đa chiều, không cảm tính. Tắt công tắc multi để so cạnh nhau và bấm 'Xuất report.md' (gọi render_markdown_report thật)."
+  },
+  "option_b": {
+    "label": "B · 'Nhìn thấy hay hơn' (cảm tính)",
+    "code": "# Khong do gi ca\nprint(answer_multi)\nprint(answer_single)\n# roi tu ket luan cai nao tot hon -> thien kien, khong tai lap",
+    "source_ref": null,
+    "narration": "Đánh giá bằng cảm tính không tái lập (reproducible) được và đầy thiên kiến. Production cần số liệu để ra quyết định."
+  },
+  "glossary": [
+    {"term": "benchmark", "vi": "phép đo so sánh có hệ thống"},
+    {"term": "runner", "vi": "hàm chạy cắm được, đổi cách chạy mà không đổi thước đo"},
+    {"term": "latency", "vi": "độ trễ, thời gian chạy"},
+    {"term": "reproducible", "vi": "tái lập được kết quả"}
+  ]
+}

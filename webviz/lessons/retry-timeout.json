@@ -1,0 +1,22 @@
+{
+  "id": "retry-timeout",
+  "title": "Retry (thử lại) & timeout (hạn chờ)",
+  "option_a": {
+    "label": "A · Có @retry + timeout",
+    "code": "    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))\n    def complete(self, system_prompt: str, user_prompt: str) -> LLMResponse:\n        \"\"\"Return a model completion with retry, timeout, and token logging.\"\"\"\n\n        response = self._client.chat.completions.create(\n            model=self._model,\n            messages=[\n                {\"role\": \"system\", \"content\": system_prompt},\n                {\"role\": \"user\", \"content\": user_prompt},\n            ],\n            timeout=get_settings().timeout_seconds,\n        )",
+    "source_ref": "src/multi_agent_research_lab/services/llm_client.py:38-49",
+    "narration": "Decorator @retry (trang trí thử lại) tự gọi lại tối đa 3 lần với backoff (chờ tăng dần) khi gặp lỗi tạm thời; timeout (hạn chờ) chặn treo vô hạn. Bật công tắc retry rồi gây 1 lỗi mạng tạm thời: workflow vẫn sống. Lưu ý SearchClient KHÔNG có lớp retry, nên 1 lỗi search là chết luôn."
+  },
+  "option_b": {
+    "label": "B · Không retry, không timeout",
+    "code": "    def complete(self, system_prompt, user_prompt):\n        # Mot loi mang tam thoi -> nem exception -> chet ca workflow\n        response = self._client.chat.completions.create(model=self._model, messages=[...])",
+    "source_ref": null,
+    "narration": "Không có retry: một lỗi tạm thời (transient error) cũng làm hỏng toàn bộ lần chạy. Không timeout: một request treo có thể làm đứng cả tiến trình."
+  },
+  "glossary": [
+    {"term": "retry", "vi": "thử lại tự động khi gặp lỗi tạm thời"},
+    {"term": "timeout", "vi": "hạn chờ tối đa cho một lời gọi"},
+    {"term": "backoff", "vi": "chờ lâu dần giữa các lần thử lại"},
+    {"term": "transient error", "vi": "lỗi tạm thời, thường tự hết khi thử lại"}
+  ]
+}

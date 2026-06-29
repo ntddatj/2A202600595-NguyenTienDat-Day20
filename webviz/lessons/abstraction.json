@@ -1,0 +1,22 @@
+{
+  "id": "abstraction",
+  "title": "LLM client là một abstraction (lớp trừu tượng)",
+  "option_a": {
+    "label": "A · Agent phụ thuộc interface, không phụ thuộc SDK",
+    "code": "@dataclass(frozen=True)\nclass LLMResponse:\n    content: str\n    input_tokens: int | None = None\n    output_tokens: int | None = None\n    cost_usd: float | None = None\n\n\nclass LLMClient:\n    \"\"\"Provider-agnostic LLM client backed by OpenAI.\"\"\"\n\n    def __init__(self) -> None:\n        from openai import OpenAI  # imported lazily to avoid hard dep when mocking\n\n        settings = get_settings()\n        self._model = settings.openai_model\n        self._client = OpenAI(api_key=settings.openai_api_key)",
+    "source_ref": "src/multi_agent_research_lab/services/llm_client.py:20-36",
+    "narration": "Agent chỉ gọi LLMClient().complete(...), không import thẳng SDK (bộ thư viện của nhà cung cấp). Nhờ abstraction này, ta thay LLM thật bằng FakeLLMClient để test offline (chạy không cần mạng) mà không sửa agent. Production chọn cách này vì dễ thay nhà cung cấp và dễ mock."
+  },
+  "option_b": {
+    "label": "B · Agent gọi thẳng SDK",
+    "code": "from openai import OpenAI\n\nclass ResearcherAgent:\n    def run(self, state):\n        client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])\n        resp = client.chat.completions.create(...)  # SDK ro ri vao agent",
+    "source_ref": null,
+    "narration": "Gọi thẳng SDK khiến mọi agent dính chặt vào một nhà cung cấp; muốn test phải mock cả thư viện ngoài, đổi provider (nhà cung cấp) phải sửa khắp nơi."
+  },
+  "glossary": [
+    {"term": "abstraction", "vi": "lớp trừu tượng che chi tiết bên dưới"},
+    {"term": "SDK", "vi": "bộ thư viện của nhà cung cấp"},
+    {"term": "mock", "vi": "thay bằng bản giả để test"},
+    {"term": "provider", "vi": "nhà cung cấp dịch vụ (vd OpenAI)"}
+  ]
+}

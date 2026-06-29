@@ -1,0 +1,22 @@
+{
+  "id": "search-grounding",
+  "title": "Search grounding (neo câu trả lời vào nguồn)",
+  "option_a": {
+    "label": "A · Có search → có sources → có trích dẫn",
+    "code": "        search = SearchClient()\n        docs = search.search(state.request.query, max_results=state.request.max_sources)\n        state.sources = docs\n        logger.info(\"ResearcherAgent fetched %d sources\", len(docs))\n\n        snippets = \"\\n\\n\".join(\n            f\"[{i + 1}] {d.title}\\n{d.snippet}\" for i, d in enumerate(docs)\n        )\n        user_prompt = f\"Query: {state.request.query}\\n\\nSources:\\n{snippets}\"\n\n        llm = LLMClient()\n        resp = llm.complete(system_prompt=_SYSTEM, user_prompt=user_prompt)\n        state.research_notes = resp.content",
+    "source_ref": "src/multi_agent_research_lab/agents/researcher.py:28-40",
+    "narration": "Researcher gọi search, đưa snippet (đoạn trích nguồn) vào prompt rồi mới hỏi LLM — đây là grounding (neo nội dung vào nguồn thật). Nhờ vậy writer có thể trích dẫn [N] và citation coverage (tỉ lệ nguồn được trích) > 0. Tắt search: sources rỗng → coverage = 0."
+  },
+  "option_b": {
+    "label": "B · Không search, để LLM tự bịa",
+    "code": "        user_prompt = f\"Query: {state.request.query}\"  # khong co nguon\n        resp = LLMClient().complete(system_prompt=_SYSTEM, user_prompt=user_prompt)\n        state.research_notes = resp.content  # de hallucination (bia)",
+    "source_ref": null,
+    "narration": "Không grounding: mô hình dễ hallucination (bịa thông tin) và không có nguồn để trích dẫn, coverage = 0, khó kiểm chứng."
+  },
+  "glossary": [
+    {"term": "grounding", "vi": "neo câu trả lời vào nguồn thật"},
+    {"term": "snippet", "vi": "đoạn trích ngắn từ nguồn"},
+    {"term": "citation coverage", "vi": "tỉ lệ nguồn được trích trong câu trả lời"},
+    {"term": "hallucination", "vi": "mô hình bịa thông tin không có thật"}
+  ]
+}
