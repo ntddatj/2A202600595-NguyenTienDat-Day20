@@ -11,7 +11,10 @@ if _root not in sys.path:
 # Pre-load the real webviz package so sys.modules["webviz"] points to webviz/__init__.py.
 # Without this, pytest (importlib mode) would register tests/webviz/ as the webviz package
 # during test collection, shadowing the actual webviz/ package at the project root.
-if "webviz" not in sys.modules or not getattr(sys.modules.get("webviz"), "__file__", "").endswith("webviz/__init__.py"):
+_real_webviz_init = (Path(__file__).resolve().parent.parent / "webviz" / "__init__.py")
+_loaded = sys.modules.get("webviz")
+_loaded_file = Path(getattr(_loaded, "__file__", "")).resolve() if _loaded and getattr(_loaded, "__file__", "") else None
+if "webviz" not in sys.modules or _loaded_file != _real_webviz_init:
     _spec = importlib.util.spec_from_file_location("webviz", _root + "/webviz/__init__.py",
         submodule_search_locations=[_root + "/webviz"])
     _mod = importlib.util.module_from_spec(_spec)
