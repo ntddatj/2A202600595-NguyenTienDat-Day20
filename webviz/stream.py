@@ -37,8 +37,7 @@ _BASELINE_SYSTEM = (
 
 
 def _llm_factory(cfg: RunConfig):
-    withhold = {"researcher"} if cfg.withhold_research_notes else set()
-    return partial(FakeLLMClient, fault=cfg.llm_fault, retry=cfg.llm_retry, withhold_roles=withhold)
+    return partial(FakeLLMClient, fault=cfg.llm_fault, retry=cfg.llm_retry)
 
 
 def _search_factory(cfg: RunConfig):
@@ -68,6 +67,13 @@ def mock_clients(cfg: RunConfig) -> Iterator[None]:
         patch(_search_mod, "SearchClient", search)
         if cfg.max_iter_override is not None:
             settings.max_iterations = cfg.max_iter_override  # pydantic: no validate_assignment
+        if cfg.withhold_research_notes:
+            _orig_run = _researcher.ResearcherAgent.run
+            def _looping_run(self, state):
+                state = _orig_run(self, state)
+                state.research_notes = None  # force supervisor to keep routing to researcher
+                return state
+            patch(_researcher.ResearcherAgent, "run", _looping_run)
         yield
     finally:
         for mod, name, old in saved:
@@ -130,33 +136,6 @@ def _run_baseline(query: str, cfg: RunConfig) -> Iterator[StreamEvent]:
                       lane=_lane(state), note="Baseline xong: không có sources nên coverage = 0.")
 
 
-def _simulate_runaway(query: str, cfg: RunConfig) -> Iterator[StreamEvent]:
-    """Simulated demo of the unbounded loop that happens when the max_iterations
-    guardrail is off. A faithful real loop can't run without editing src/, so we
-    synthesize the sequence the supervisor WOULD produce — repeatedly routing to
-    researcher because research_notes never fills — capped at the backend hard cap.
-    """
-    state = ResearchState(request=ResearchQuery(query=query))
-    step = 0
-    while step < cfg.hard_cap:
-        step += 1
-        state.record_route("researcher")
-        yield StreamEvent(
-            kind="node", step=step, active_node="supervisor",
-            edge_taken=EdgeTaken(source="supervisor", target="researcher", style="dashed"),
-            state_snapshot=_snapshot(state), metrics=_metrics(state), lane=_lane(state),
-            note="(mô phỏng) research_notes vẫn rỗng và guardrail đã tắt → "
-                 f"supervisor lại chọn researcher (iteration {state.iteration}).",
-        )
-    yield StreamEvent(
-        kind="warning", step=step + 1, active_node="supervisor",
-        state_snapshot=_snapshot(state), metrics=_metrics(state), lane=_lane(state),
-        note=f"Đã chạm trần cứng {cfg.hard_cap} bước — nếu KHÔNG có guardrail "
-             "max_iterations, vòng lặp này sẽ chạy mãi (cháy token/tiền). "
-             "Backend chặn lại để an toàn.",
-    )
-
-
 def run_stream(query: str, cfg: RunConfig) -> Iterator[StreamEvent]:
     """Yield one StreamEvent per node; wrap any runtime error as a kind='error' event."""
     if cfg.runner == "baseline":
@@ -164,14 +143,6 @@ def run_stream(query: str, cfg: RunConfig) -> Iterator[StreamEvent]:
             yield from _run_baseline(query, cfg)
         except Exception as exc:  # noqa: BLE001 - never let the server 500
             yield StreamEvent(kind="error", step=0, note=f"Baseline lỗi: {exc}")
-        return
-
-    if cfg.withhold_research_notes:
-        # "max_iterations OFF" demo. A real infinite loop is impossible without
-        # editing src/ (researcher always writes research_notes, and content=None
-        # would crash AgentResult). Per the approved spec this is a *simulated*
-        # runaway that stops at the backend hard cap to prove the guardrail's value.
-        yield from _simulate_runaway(query, cfg)
         return
 
     step = 0
