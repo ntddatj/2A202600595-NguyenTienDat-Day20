@@ -17,9 +17,10 @@ class RunConfig:
     max_iter_override: int | None      # None => leave settings.max_iterations untouched
     hard_cap: int = HARD_CAP
     live: bool = False                 # True => skip monkeypatch, use REAL OpenAI/Tavily clients
+    break_tracing: bool = False        # True => demo real trace_span fail-open in run_stream
 
 
-def build_run_config(toggles: dict[str, bool], live: bool = False) -> RunConfig:
+def build_run_config(toggles: dict[str, bool], live: bool = False, break_tracing: bool = False) -> RunConfig:
     multi = bool(toggles.get("multi", True))
     retry = bool(toggles.get("retry", True))
     max_iterations = bool(toggles.get("max_iterations", True))
@@ -34,4 +35,5 @@ def build_run_config(toggles: dict[str, bool], live: bool = False) -> RunConfig:
         withhold_research_notes=not max_iterations,
         max_iter_override=None if max_iterations else 9999,
         live=live,
+        break_tracing=break_tracing,
     )

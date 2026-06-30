@@ -37,3 +37,12 @@ def test_max_iter_off_forces_loop_and_high_override():
 def test_live_defaults_off_and_passes_through():
     assert _cfg().live is False
     assert build_run_config(DEF, live=True).live is True
+
+
+# Change 1 tests
+def test_break_tracing_defaults_false():
+    assert _cfg().break_tracing is False
+
+
+def test_break_tracing_passes_through():
+    assert build_run_config(DEF, break_tracing=True).break_tracing is True

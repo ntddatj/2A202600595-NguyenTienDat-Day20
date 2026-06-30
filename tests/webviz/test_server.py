@@ -46,6 +46,19 @@ def test_report_returns_markdown():
     assert "# Benchmark Report" in r.text
 
 
+# Change 4: /compare endpoint
+def test_compare_returns_single_and_multi():
+    pytest.importorskip("langgraph")
+    body = {"query": "Explain vector databases",
+            "toggles": {"multi": True, "retry": True, "max_iterations": True, "search": True}}
+    r = client.post("/compare", json=body)
+    assert r.status_code == 200
+    data = r.json()
+    assert "single" in data and "multi" in data
+    assert data["multi"]["citation_coverage"] > 0
+    assert data["single"]["citation_coverage"] == 0
+
+
 def test_index_has_key_element_ids():
     html = client.get("/").text
     for el in ["id=\"query\"", "id=\"run\"", "id=\"graph\"", "id=\"clipboard\"",

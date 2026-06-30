@@ -1,6 +1,7 @@
 """Run the REAL workflow with mock clients monkeypatched in, yielding StreamEvents."""
 
 import contextlib
+import os
 from collections.abc import Iterator
 from functools import partial
 
@@ -9,6 +10,7 @@ from multi_agent_research_lab.core.schemas import AgentName, AgentResult, Resear
 from multi_agent_research_lab.core.state import ResearchState
 from multi_agent_research_lab.graph.workflow import MultiAgentWorkflow
 from multi_agent_research_lab.services.llm_client import LLMClient  # real client for Live mode
+from multi_agent_research_lab.observability import tracing as _tracing
 # Reuse the lab's OWN metric functions (DRY) so the live panel, the exported
 # report, and src all compute cost/coverage identically. They are underscore-
 # private but importing within the package is acceptable given src/ is read-only.
@@ -81,6 +83,49 @@ def mock_clients(cfg: RunConfig) -> Iterator[None]:
         settings.max_iterations = saved_max
 
 
+@contextlib.contextmanager
+def _live_search_patch(cfg: RunConfig) -> Iterator[None]:
+    """Live mode with search=off: patch only SearchClient to empty mode, leave LLMClient real."""
+    fake_search = partial(FakeSearchClient, mode="empty")
+    saved: list[tuple[object, str, object]] = []
+
+    def patch(mod: object, name: str, value: object) -> None:
+        if hasattr(mod, name):
+            saved.append((mod, name, getattr(mod, name)))
+            setattr(mod, name, value)
+
+    try:
+        patch(_researcher, "SearchClient", fake_search)
+        patch(_search_mod, "SearchClient", fake_search)
+        yield
+    finally:
+        for mod, name, old in saved:
+            setattr(mod, name, old)
+
+
+@contextlib.contextmanager
+def _force_tracing_failure() -> Iterator[None]:
+    """Temporarily force langsmith.Client to fail so trace_span's except:pass is exercised."""
+    saved_env = os.environ.get("LANGCHAIN_TRACING_V2")
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    import langsmith
+    saved_client = langsmith.Client
+
+    class _Boom:
+        def __init__(self, *a, **k):
+            raise RuntimeError("tracing backend down (simulated)")
+
+    langsmith.Client = _Boom
+    try:
+        yield
+    finally:
+        langsmith.Client = saved_client
+        if saved_env is None:
+            os.environ.pop("LANGCHAIN_TRACING_V2", None)
+        else:
+            os.environ["LANGCHAIN_TRACING_V2"] = saved_env
+
+
 def _metrics(state: ResearchState) -> dict:
     return {
         "estimated_cost_usd": _cost(state),
@@ -147,10 +192,20 @@ def run_stream(query: str, cfg: RunConfig) -> Iterator[StreamEvent]:
 
     step = 0
     last_state: ResearchState | None = None
-    # Live mode: skip all monkeypatching so the REAL OpenAI/Tavily clients are used.
-    client_ctx = contextlib.nullcontext() if cfg.live else mock_clients(cfg)
+    # Live mode: skip all monkeypatching (real clients) unless search=off, in which case
+    # patch only SearchClient so "no search" is honoured even in Live mode.
+    if cfg.live:
+        client_ctx = _live_search_patch(cfg) if cfg.search_mode == "empty" else contextlib.nullcontext()
+    else:
+        client_ctx = mock_clients(cfg)
     try:
         with client_ctx:
+            if cfg.break_tracing:
+                with _force_tracing_failure():
+                    with _tracing.trace_span("webviz.broken-tracing", {"demo": True}):
+                        pass  # real trace_span hits the failing client; its except:pass swallows it
+                yield StreamEvent(kind="warning", step=0,
+                                  note="⚡ Lớp tracing vừa ném lỗi và bị nuốt (fail-open) — workflow vẫn chạy tiếp.")
             compiled = MultiAgentWorkflow().build()
             state = ResearchState(request=ResearchQuery(query=query))
             for chunk in compiled.stream({"research_state": state}):
