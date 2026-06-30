@@ -160,9 +160,11 @@ async function runWorkflow(opts = {}) {
       if (!line) continue;
       const ev = JSON.parse(line.slice(5).trim());
       applyEvent(ev);
-      await sleep(speed());
+      if ($("step-mode").checked) await waitStep();   // pause until user clicks "Bước tiếp"
+      else await sleep(speed());
     }
   }
+  $("step-next").disabled = true;
   try {
     const cmp = await (await fetch("/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, toggles }) })).json();
     const single = cmp.single, multi = cmp.multi;
@@ -173,6 +175,17 @@ async function runWorkflow(opts = {}) {
     if ($("label-multi")) $("label-multi").textContent = `multi (cov ${multi.citation_coverage}, ${multi.agents} agent${multi.agents !== 1 ? "s" : ""})`;
   } catch (_) {}
 }
+
+// Step mode: when "từng bước" is checked, the run pauses after each event until
+// the user clicks "Bước tiếp" (so they can read each step at their own pace).
+let _stepResolve = null;
+function waitStep() {
+  $("step-next").disabled = false;
+  return new Promise((res) => { _stepResolve = res; });
+}
+$("step-next").addEventListener("click", () => {
+  if (_stepResolve) { const r = _stepResolve; _stepResolve = null; $("step-next").disabled = true; r(); }
+});
 
 $("run").addEventListener("click", () => runWorkflow());
 
