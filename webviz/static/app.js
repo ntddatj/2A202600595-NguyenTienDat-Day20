@@ -101,7 +101,9 @@ function applyEvent(ev) {
     if (e) e.classList.add("active");
   }
   const s = ev.state_snapshot || {};
+  const q = s.request && s.request.query;
   const FULL = {
+    query: q,
     sources: (s.sources && s.sources.length)
       ? s.sources.map((d) => "• " + (d.title || "(no title)") + (d.url ? " — " + d.url : "")).join("\n")
       : null,
@@ -109,7 +111,8 @@ function applyEvent(ev) {
     analysis_notes: s.analysis_notes,
     final_answer: s.final_answer,
   };
-  [["sources", (s.sources && s.sources.length) ? `${s.sources.length} docs` : null],
+  [["query", q],
+   ["sources", (s.sources && s.sources.length) ? `${s.sources.length} docs` : null],
    ["research_notes", s.research_notes], ["analysis_notes", s.analysis_notes],
    ["final_answer", s.final_answer]].forEach(([f, v]) => {
     const li = document.querySelector(`#state-fields li[data-field="${f}"]`);
@@ -120,14 +123,14 @@ function applyEvent(ev) {
     li.dataset.full = FULL[f] || "";
   });
   const WRITE = { researcher: ["sources", "research_notes"], analyst: ["analysis_notes"], writer: ["final_answer"] };
-  const READ = { analyst: ["research_notes"], writer: ["research_notes", "analysis_notes", "sources"] };
+  const READ = { researcher: ["query"], analyst: ["research_notes"], writer: ["research_notes", "analysis_notes", "sources"] };
   (WRITE[ev.active_node] || []).forEach((f) => document.querySelector(`li[data-field="${f}"]`)?.classList.add("write"));
   (READ[ev.active_node] || []).forEach((f) => document.querySelector(`li[data-field="${f}"]`)?.classList.add("read"));
 
   // Explicit "what is passed IN → what is written OUT" for the active node.
   const IO = {
     supervisor: "📥 đọc cả state để quyết định tuyến  ·  📤 không ghi ô dữ liệu (chỉ route_history/iteration)",
-    researcher: "📥 query (câu hỏi) + sources tra được  →  📤 sources, research_notes",
+    researcher: "📥 query (câu hỏi)  →  [tra web bằng search tool]  →  📤 sources, research_notes",
     analyst: "📥 research_notes  →  📤 analysis_notes",
     writer: "📥 research_notes, analysis_notes, sources  →  📤 final_answer",
   };
