@@ -124,6 +124,15 @@ function applyEvent(ev) {
   (WRITE[ev.active_node] || []).forEach((f) => document.querySelector(`li[data-field="${f}"]`)?.classList.add("write"));
   (READ[ev.active_node] || []).forEach((f) => document.querySelector(`li[data-field="${f}"]`)?.classList.add("read"));
 
+  // Explicit "what is passed IN → what is written OUT" for the active node.
+  const IO = {
+    supervisor: "📥 đọc cả state để quyết định tuyến  ·  📤 không ghi ô dữ liệu (chỉ route_history/iteration)",
+    researcher: "📥 query (câu hỏi) + sources tra được  →  📤 sources, research_notes",
+    analyst: "📥 research_notes  →  📤 analysis_notes",
+    writer: "📥 research_notes, analysis_notes, sources  →  📤 final_answer",
+  };
+  if (IO[ev.active_node]) { $("io-box").textContent = `${ev.active_node}:  ${IO[ev.active_node]}`; $("io-box").classList.remove("hidden"); }
+
   const c = (ev.lane && ev.lane.control) || {};
   $("lane-control").textContent = `route_history=[${(c.route_history || []).join(",")}] · iter=${c.iteration ?? 0}`;
   const o = (ev.lane && ev.lane.observability) || {};
