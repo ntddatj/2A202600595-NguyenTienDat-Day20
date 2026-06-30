@@ -151,10 +151,12 @@ async function runWorkflow(opts = {}) {
     const { value, done } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
-    let idx;
-    while ((idx = buf.indexOf("\n\n")) >= 0) {
-      const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
-      const line = frame.split("\n").find((l) => l.startsWith("data:"));
+    let m;
+    // SSE frames are separated by a blank line; sse-starlette uses CRLF (\r\n\r\n),
+    // so match \r?\n\r?\n rather than only "\n\n" (the latter never matched → no render).
+    while ((m = buf.match(/\r?\n\r?\n/))) {
+      const frame = buf.slice(0, m.index); buf = buf.slice(m.index + m[0].length);
+      const line = frame.split(/\r?\n/).find((l) => l.startsWith("data:"));
       if (!line) continue;
       const ev = JSON.parse(line.slice(5).trim());
       applyEvent(ev);

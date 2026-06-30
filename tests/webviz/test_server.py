@@ -75,3 +75,12 @@ def test_appjs_wires_compare_and_break_tracing():
     js = pathlib.Path("webviz/static/app.js").read_text()
     assert "/compare" in js, "app.js must call /compare"
     assert "break_tracing" in js, "app.js must pass break_tracing"
+
+def test_app_js_sse_parser_handles_crlf_frames():
+    """sse-starlette separates SSE events with CRLF blank lines (\\r\\n\\r\\n).
+    The browser parser must split on \\r?\\n\\r?\\n, not only "\\n\\n" — the latter
+    never matches, so no events render (trace log/clipboard stay empty)."""
+    from pathlib import Path
+    js = (Path(__file__).resolve().parents[2] / "webviz" / "static" / "app.js").read_text()
+    assert r"\r?\n\r?\n" in js, "SSE frame split must be CRLF-aware"
+    assert 'indexOf("\\n\\n")' not in js, "old LF-only frame split must be gone"
