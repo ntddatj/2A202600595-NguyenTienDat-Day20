@@ -1,7 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"><title>webviz</title></head>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>webviz — Lab 20 Multi-Agent</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
 <body>
-<p>webviz teaching GUI — Task 8 will add the real frontend here.</p>
+  <header id="controls">
+    <input id="query" type="text" value="Explain vector databases for RAG" placeholder="Nhập câu hỏi nghiên cứu" />
+    <button id="run">▶ Run</button>
+    <label class="mode"><input id="mode-live" type="checkbox" /> Live (mặc định Mock)</label>
+    <span class="toggles">
+      <label><input id="toggle-multi" type="checkbox" checked /> multi</label>
+      <label><input id="toggle-retry" type="checkbox" checked /> retry</label>
+      <label><input id="toggle-max_iterations" type="checkbox" checked /> max_iter</label>
+      <label><input id="toggle-search" type="checkbox" checked /> search</label>
+    </span>
+    <button id="break-tracing">⚡ gây lỗi tracing</button>
+    <label class="speed">Tốc độ <input id="speed" type="range" min="0" max="1500" value="600" step="100" /></label>
+  </header>
+
+  <main>
+    <section id="graph" class="panel">
+      <h3>Graph</h3>
+      <svg id="graph-svg" viewBox="0 0 320 220" aria-label="workflow graph">
+        <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L6,3 L0,6 z" fill="#888"/></marker></defs>
+        <line class="edge dashed" data-edge="supervisor-researcher" x1="160" y1="60" x2="60"  y2="140" marker-end="url(#arrow)"/>
+        <line class="edge dashed" data-edge="supervisor-analyst"    x1="160" y1="60" x2="160" y2="140" marker-end="url(#arrow)"/>
+        <line class="edge dashed" data-edge="supervisor-writer"     x1="160" y1="60" x2="260" y2="140" marker-end="url(#arrow)"/>
+        <line class="edge solid"  data-edge="researcher-supervisor" x1="60"  y1="140" x2="160" y2="60"/>
+        <line class="edge solid"  data-edge="analyst-supervisor"    x1="160" y1="140" x2="160" y2="60"/>
+        <line class="edge solid"  data-edge="writer-supervisor"     x1="260" y1="140" x2="160" y2="60"/>
+        <g class="node" id="node-supervisor"  data-lesson="route-by-state"><circle cx="160" cy="50"  r="26"/><text x="160" y="54">super</text></g>
+        <g class="node" id="node-researcher" data-lesson="search-grounding"><circle cx="60"  cy="150" r="24"/><text x="60"  y="154">resrch</text></g>
+        <g class="node" id="node-analyst"    data-lesson="route-by-state"><circle cx="160" cy="150" r="24"/><text x="160" y="154">analyst</text></g>
+        <g class="node" id="node-writer"     data-lesson="search-grounding"><circle cx="260" cy="150" r="24"/><text x="260" y="154">writer</text></g>
+      </svg>
+      <p class="hint" data-lesson="langgraph-edges"><b>nét đứt</b> = conditional (từ supervisor) · <b>nét liền</b> = loop-back (về supervisor). Bấm để mở bài học.</p>
+      <div id="provider-badges">
+        <span class="badge" id="badge-llm" data-lesson="abstraction">LLM: Mock</span>
+        <span class="badge" id="badge-search" data-lesson="search-grounding">Search: Mock</span>
+      </div>
+      <div id="tracing-banner" class="banner hidden" data-lesson="fail-open">⚡ Tracing lỗi — nhưng workflow vẫn chạy (fail-open).</div>
+    </section>
+
+    <section id="clipboard" class="panel">
+      <h3>Tấm bìa (shared state)</h3>
+      <ul id="state-fields">
+        <li data-field="sources"><span class="k">sources</span> <span class="v">None</span></li>
+        <li data-field="research_notes"><span class="k">research_notes</span> <span class="v">None</span></li>
+        <li data-field="analysis_notes"><span class="k">analysis_notes</span> <span class="v">None</span></li>
+        <li data-field="final_answer"><span class="k">final_answer</span> <span class="v">None</span></li>
+      </ul>
+      <div id="decision-box" class="box" data-lesson="route-by-state">Decision: —</div>
+      <div class="lanes">
+        <div class="lane control" data-lesson="control-vs-observability"><b>control</b><div id="lane-control">route_history=[] · iter=0</div></div>
+        <div class="lane obs" data-lesson="control-vs-observability"><b>observability</b><div id="lane-obs">trace: 0</div></div>
+      </div>
+      <div id="hat" class="box hidden"><b>🎩 system prompt</b><pre id="hat-text"></pre></div>
+    </section>
+
+    <aside id="lesson-panel" class="panel">
+      <div class="lesson-head">
+        <h3 id="lesson-title">Bài học</h3>
+        <div class="tabs"><button id="tab-code" class="tab">Code</button><button id="tab-narr" class="tab active">Thuyết minh</button></div>
+      </div>
+      <div id="lesson-delta" class="delta hidden"></div>
+      <div id="lesson-code" class="tabbody hidden"><pre><code id="code-a"></code></pre><pre class="dim"><code id="code-b"></code></pre></div>
+      <div id="lesson-narr" class="tabbody"><p id="narr-a"></p><p id="narr-b" class="dim"></p><div id="glossary"></div></div>
+    </aside>
+
+    <section id="bottom" class="panel">
+      <div id="trace-log"><h3>Trace log</h3><ol id="trace-list"></ol></div>
+      <div id="metrics"><h3>Metrics</h3>
+        <div class="bars" data-lesson="benchmark">
+          <div class="bar-row"><span>single latency</span><div class="bar" id="bar-single"></div></div>
+          <div class="bar-row"><span>multi latency</span><div class="bar" id="bar-multi"></div></div>
+          <div class="bar-row"><span>coverage</span><div class="bar" id="bar-cov"></div></div>
+          <div class="bar-row"><span>cost (USD)</span><div class="bar" id="bar-cost"></div></div>
+        </div>
+        <button id="export-report">⬇ Xuất benchmark_report.md</button>
+      </div>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
 </body>
 </html>

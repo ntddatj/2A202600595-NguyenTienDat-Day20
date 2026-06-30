@@ -44,3 +44,13 @@ def test_report_returns_markdown():
     r = client.post("/report", json=body)
     assert r.status_code == 200
     assert "# Benchmark Report" in r.text
+
+
+def test_index_has_key_element_ids():
+    html = client.get("/").text
+    for el in ["id=\"query\"", "id=\"run\"", "id=\"graph\"", "id=\"clipboard\"",
+               "id=\"lesson-panel\"", "id=\"trace-log\"", "id=\"metrics\"",
+               "id=\"toggle-multi\"", "id=\"toggle-retry\"", "id=\"toggle-max_iterations\"",
+               "id=\"toggle-search\"", "id=\"break-tracing\"", "id=\"export-report\"",
+               "id=\"mode-live\"", "id=\"speed\""]:
+        assert el in html, el
