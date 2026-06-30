@@ -101,14 +101,23 @@ function applyEvent(ev) {
     if (e) e.classList.add("active");
   }
   const s = ev.state_snapshot || {};
+  const FULL = {
+    sources: (s.sources && s.sources.length)
+      ? s.sources.map((d) => "• " + (d.title || "(no title)") + (d.url ? " — " + d.url : "")).join("\n")
+      : null,
+    research_notes: s.research_notes,
+    analysis_notes: s.analysis_notes,
+    final_answer: s.final_answer,
+  };
   [["sources", (s.sources && s.sources.length) ? `${s.sources.length} docs` : null],
    ["research_notes", s.research_notes], ["analysis_notes", s.analysis_notes],
    ["final_answer", s.final_answer]].forEach(([f, v]) => {
     const li = document.querySelector(`#state-fields li[data-field="${f}"]`);
     if (!li) return;
     li.classList.remove("read", "write");
-    li.querySelector(".v").textContent = v ? "✔" : "None";
+    li.querySelector(".v").textContent = v ? "✔ — bấm xem" : "None";
     li.classList.toggle("filled", !!v);
+    li.dataset.full = FULL[f] || "";
   });
   const WRITE = { researcher: ["sources", "research_notes"], analyst: ["analysis_notes"], writer: ["final_answer"] };
   const READ = { analyst: ["research_notes"], writer: ["research_notes", "analysis_notes", "sources"] };
@@ -188,6 +197,16 @@ $("step-next").addEventListener("click", () => {
 });
 
 $("run").addEventListener("click", () => runWorkflow());
+
+// Click a filled state field to read its actual content (the ✔ only means "filled").
+document.querySelectorAll("#state-fields li").forEach((li) => {
+  li.addEventListener("click", () => {
+    const box = $("field-content");
+    const full = li.dataset.full;
+    if (full) { box.textContent = `${li.dataset.field}:\n\n${full}`; box.classList.remove("hidden"); }
+    else { box.textContent = `${li.dataset.field}: (chưa có nội dung — hãy Run trước)`; box.classList.remove("hidden"); }
+  });
+});
 
 $("export-report").addEventListener("click", async () => {
   const body = { query: $("query").value, toggles: readToggles() };
