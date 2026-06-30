@@ -84,6 +84,7 @@ $("mode-live").addEventListener("change", setBadges);
 $("break-tracing").addEventListener("click", () => {
   $("tracing-banner").classList.remove("hidden");
   showLesson("fail-open", { openNarration: true, delta: "tracing: vừa bị ép lỗi · workflow vẫn chạy (fail-open)" });
+  runWorkflow({ break_tracing: true });
 });
 
 function readToggles() { const t = {}; TOGGLES.forEach((n) => (t[n] = $(`toggle-${n}`).checked)); return t; }
@@ -135,10 +136,12 @@ function applyEvent(ev) {
   $("trace-list").appendChild(li);
 }
 
-$("run").addEventListener("click", async () => {
+async function runWorkflow(opts = {}) {
   $("trace-list").innerHTML = "";
   setBadges();
-  const body = { query: $("query").value, live: $("mode-live").checked, toggles: readToggles() };
+  const query = $("query").value;
+  const toggles = readToggles();
+  const body = { query, live: $("mode-live").checked, break_tracing: opts.break_tracing || false, toggles };
   const resp = await fetch("/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const reader = resp.body.getReader();
   const decoder = new TextDecoder();
@@ -158,7 +161,18 @@ $("run").addEventListener("click", async () => {
       await sleep(speed());
     }
   }
-});
+  try {
+    const cmp = await (await fetch("/compare", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query, toggles }) })).json();
+    const single = cmp.single, multi = cmp.multi;
+    const maxLat = Math.max(single.latency_seconds, multi.latency_seconds);
+    $("bar-single").style.width = (maxLat ? single.latency_seconds / maxLat * 100 : 0) + "%";
+    $("bar-multi").style.width = (maxLat ? multi.latency_seconds / maxLat * 100 : 0) + "%";
+    if ($("label-single")) $("label-single").textContent = `single (cov ${single.citation_coverage}, ${single.agents} agent${single.agents !== 1 ? "s" : ""})`;
+    if ($("label-multi")) $("label-multi").textContent = `multi (cov ${multi.citation_coverage}, ${multi.agents} agent${multi.agents !== 1 ? "s" : ""})`;
+  } catch (_) {}
+}
+
+$("run").addEventListener("click", () => runWorkflow());
 
 $("export-report").addEventListener("click", async () => {
   const body = { query: $("query").value, toggles: readToggles() };

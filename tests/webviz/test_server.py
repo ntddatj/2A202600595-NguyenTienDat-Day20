@@ -67,3 +67,11 @@ def test_index_has_key_element_ids():
                "id=\"toggle-search\"", "id=\"break-tracing\"", "id=\"export-report\"",
                "id=\"mode-live\"", "id=\"speed\""]:
         assert el in html, el
+
+
+def test_appjs_wires_compare_and_break_tracing():
+    """app.js must reference /compare endpoint and break_tracing flag."""
+    import pathlib
+    js = pathlib.Path("webviz/static/app.js").read_text()
+    assert "/compare" in js, "app.js must call /compare"
+    assert "break_tracing" in js, "app.js must pass break_tracing"
