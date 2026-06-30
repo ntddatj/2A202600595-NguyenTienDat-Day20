@@ -10,3 +10,6 @@ build/
 *.egg-info/
 reports/*.json
 !.gitkeep
+
+# SDD scratch (briefs, reports, ledger, review diffs)
+.superpowers/
