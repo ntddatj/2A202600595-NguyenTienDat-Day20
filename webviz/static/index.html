@@ -29,9 +29,9 @@
       <svg id="graph-svg" viewBox="0 0 320 220" aria-label="workflow graph">
         <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
           <path d="M0,0 L6,3 L0,6 z" fill="#888"/></marker></defs>
-        <line class="edge dashed" data-edge="supervisor-researcher" x1="160" y1="60" x2="60"  y2="140" marker-end="url(#arrow)"/>
-        <line class="edge dashed" data-edge="supervisor-analyst"    x1="160" y1="60" x2="160" y2="140" marker-end="url(#arrow)"/>
-        <line class="edge dashed" data-edge="supervisor-writer"     x1="160" y1="60" x2="260" y2="140" marker-end="url(#arrow)"/>
+        <path class="edge dashed" data-edge="supervisor-researcher" d="M160,60 Q100.6,88.3 60,140" marker-end="url(#arrow)"/>
+        <path class="edge dashed" data-edge="supervisor-analyst"    d="M160,60 Q145,100 160,140" marker-end="url(#arrow)"/>
+        <path class="edge dashed" data-edge="supervisor-writer"     d="M160,60 Q200.6,111.7 260,140" marker-end="url(#arrow)"/>
         <line class="edge solid"  data-edge="researcher-supervisor" x1="60"  y1="140" x2="160" y2="60"/>
         <line class="edge solid"  data-edge="analyst-supervisor"    x1="160" y1="140" x2="160" y2="60"/>
         <line class="edge solid"  data-edge="writer-supervisor"     x1="260" y1="140" x2="160" y2="60"/>
